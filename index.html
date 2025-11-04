@@ -1,0 +1,795 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Painel Financeiro Pessoal</title>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            padding: 0;
+            background: #f8f9fa;
+            color: #333;
+        }
+        h1 {
+            font-size: 24px;
+            margin-bottom: 10px;
+        }
+        nav {
+            margin: 0 20px;
+            padding: 15px;
+            display: flex;
+            gap: 10px;
+            background: #ffffff;
+            border-radius: 8px;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+        }
+        nav button {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            background-color: #007bff;
+            color: #fff;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        nav button:hover {
+            background-color: #0056b3;
+        }
+        section {
+            display: none;
+            margin: 20px;
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+        }
+        section.active {
+            display: block;
+        }
+        form label {
+            display: block;
+            margin-bottom: 8px;
+        }
+        form input, form select, form textarea {
+            width: 100%;
+            padding: 8px;
+            margin-top: 4px;
+            margin-bottom: 12px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        form button {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            background-color: #28a745;
+            color: #fff;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        form button:hover {
+            background-color: #218838;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+            background: #fff;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        thead {
+            background: #f0f0f0;
+        }
+        tbody tr:nth-child(odd) {
+            background: #f9f9f9;
+        }
+        .positive {
+            color: green;
+            font-weight: bold;
+        }
+        .negative {
+            color: red;
+            font-weight: bold;
+        }
+
+        /* Estilo do resumo no dashboard */
+        #summary p {
+            font-size: 16px;
+            margin-bottom: 6px;
+        }
+        #summary span {
+            font-weight: bold;
+        }
+    </style>
+
+        <!-- Google Fonts and Chart.js library for interactive charts -->
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <h1>Painel Financeiro Pessoal</h1>
+    <nav>
+        <button onclick="showSection('transaction')">Adicionar Lançamento</button>
+        <button onclick="showSection('fixed')">Cadastrar Custo Fixo</button>
+        <button onclick="showSection('dashboard')">Dashboard</button>
+        <button onclick="showSection('categories')">Categorias</button>
+    </nav>
+
+    <!-- Formulário de lançamentos -->
+    <section id="transaction" class="active">
+        <h2>Adicionar Lançamento</h2>
+        <form id="transactionForm" onsubmit="addTransaction(event)">
+            <label>
+                Data:
+                <input type="date" id="transDate" required>
+            </label>
+            <label>
+                Categoria:
+                <select id="transCategory" class="category-select" required></select>
+            </label>
+            <label>
+                Descrição:
+                <input type="text" id="transDescription" required>
+            </label>
+            <label>
+                Tipo:
+                <select id="transType" required>
+                    <option value="Receita">Receita</option>
+                    <option value="Despesa">Despesa</option>
+                </select>
+            </label>
+            <label>
+                Valor:
+                <input type="number" id="transValue" step="0.01" min="0" required>
+            </label>
+            <label>
+                Forma de Pagamento:
+                <input type="text" id="transPayment" placeholder="Ex: Cartão, Boleto">
+            </label>
+            <label>
+                Observações:
+                <textarea id="transNotes"></textarea>
+            </label>
+            <button type="submit">Salvar Lançamento</button>
+        </form>
+    </section>
+
+    <!-- Formulário de custos fixos -->
+    <section id="fixed">
+        <h2>Cadastrar Custo Fixo</h2>
+        <form id="fixedForm" onsubmit="addFixedCost(event)">
+            <label>
+                Nome:
+                <input type="text" id="fixName" required>
+            </label>
+            <label>
+                Categoria:
+                <select id="fixCategory" class="category-select" required></select>
+            </label>
+            <label>
+                Valor:
+                <input type="number" id="fixValue" step="0.01" min="0" required>
+            </label>
+            <label>
+                Dia de Vencimento (1-31):
+                <input type="number" id="fixDay" min="1" max="31" required>
+            </label>
+            <label>
+                Forma de Pagamento:
+                <input type="text" id="fixPayment" placeholder="Ex: Conta corrente, Cartão">
+            </label>
+            <label>
+                Observações:
+                <textarea id="fixNotes"></textarea>
+            </label>
+            <label>
+                Ativo:
+                <input type="checkbox" id="fixActive" checked>
+            </label>
+            <button type="submit">Salvar Custo Fixo</button>
+        </form>
+    </section>
+
+    <!-- Dashboard -->
+    <section id="dashboard">
+        <h2>Dashboard</h2>
+        <div id="filters">
+            <label>
+                Data Inicial:
+                <input type="date" id="startDate" onchange="applyFilters()">
+            </label>
+            <label>
+                Data Final:
+                <input type="date" id="endDate" onchange="applyFilters()">
+            </label>
+        <label>
+            Categoria:
+            <select id="filterCategory" onchange="applyFilters()">
+                <option value="">Todas</option>
+            </select>
+        </label>
+        <label>
+            Pesquisar descrição:
+            <input type="text" id="filterDescription" oninput="applyFilters()">
+        </label>
+            <button onclick="resetFilters()">Limpar Filtros</button>
+            <button onclick="exportCSV()">Exportar CSV</button>
+        </div>
+        <div id="summary">
+            <p>Total de Receitas: <span id="totalIncome">0</span></p>
+            <p>Total de Despesas: <span id="totalExpense">0</span></p>
+            <p>Saldo: <span id="netBalance">0</span></p>
+        </div>
+        <!-- Avisos de orçamento excedido -->
+        <div id="budgetWarnings" style="color: red; margin-top: 10px;"></div>
+        <canvas id="categoryChartCanvas" style="margin-top: 20px;"></canvas>
+        <div id="transactionsTable"></div>
+    </section>
+
+    <!-- Gerenciamento de Categorias -->
+    <section id="categories">
+        <h2>Gerenciar Categorias</h2>
+        <form id="categoryForm" onsubmit="addCategory(event)">
+            <label>
+                Nome da Categoria:
+                <input type="text" id="categoryName" required>
+            </label>
+            <label>
+                Orçamento mensal (opcional):
+                <input type="number" id="categoryBudget" min="0" step="0.01">
+            </label>
+            <button type="submit">Adicionar Categoria</button>
+        </form>
+        <ul id="categoryList" style="list-style-type: none; padding: 0;"></ul>
+    </section>
+
+    <script>
+    // Armazena dados em localStorage
+    const STORAGE_KEYS = {
+        transactions: 'pf_transactions',
+        fixedCosts: 'pf_fixed_costs'
+    };
+
+    // Chave de armazenamento para categorias
+    const CATEGORY_KEY = 'pf_categories';
+
+    // Instância do gráfico de categorias (mantida para destruir antes de recriar)
+    let categoryChart = null;
+
+    // Categorias padrão sugeridas. Usadas apenas se não houver nenhuma categoria cadastrada
+    const DEFAULT_CATEGORIES = [
+        { name: 'Moradia', budget: null },
+        { name: 'Alimentação', budget: null },
+        { name: 'Transporte', budget: null },
+        { name: 'Lazer', budget: null },
+        { name: 'Saúde', budget: null },
+        { name: 'Educação', budget: null },
+        { name: 'Investimentos', budget: null },
+        { name: 'Outros', budget: null }
+    ];
+
+    /**
+     * Garante que existam algumas categorias padrão no armazenamento se ainda não houver nenhuma.
+     */
+    function ensureDefaultCategories() {
+        let cats = loadCategories();
+        if (!cats) cats = [];
+        let modified = false;
+        DEFAULT_CATEGORIES.forEach(def => {
+            if (!cats.some(c => c.name === def.name)) {
+                cats.push({ name: def.name, budget: def.budget });
+                modified = true;
+            }
+        });
+        if (modified) {
+            saveCategories(cats);
+        }
+    }
+
+    // Carrega categorias do localStorage
+    function loadCategories() {
+        // Suporta versões antigas (array de strings) convertendo para objetos com nome e orçamento
+        const raw = JSON.parse(localStorage.getItem(CATEGORY_KEY) || '[]');
+        return raw.map(cat => {
+            if (typeof cat === 'string') {
+                return { name: cat, budget: null };
+            }
+            // garante que tenha as propriedades name e budget
+            return { name: cat.name || '', budget: cat.budget != null ? cat.budget : null };
+        });
+    }
+
+    // Salva categorias no localStorage
+    function saveCategories(cats) {
+        localStorage.setItem(CATEGORY_KEY, JSON.stringify(cats));
+    }
+
+    // Adiciona uma nova categoria
+    function addCategory(event) {
+        event.preventDefault();
+        const cats = loadCategories();
+        const name = document.getElementById('categoryName').value.trim();
+        // lê o orçamento opcional da categoria
+        const budgetInput = document.getElementById('categoryBudget').value;
+        const budgetVal = parseFloat(budgetInput);
+        const budget = !isNaN(budgetVal) ? budgetVal : null;
+        // verifica se já existe categoria com mesmo nome
+        if (name && !cats.some(c => c.name === name)) {
+            cats.push({ name: name, budget: budget });
+            saveCategories(cats);
+            // limpa campos
+            document.getElementById('categoryName').value = '';
+            document.getElementById('categoryBudget').value = '';
+            renderCategoryList();
+            renderCategoryOptions();
+            alert('Categoria adicionada com sucesso!');
+        } else {
+            alert('Categoria inválida ou já existente.');
+        }
+    }
+
+    // Edita o nome de uma categoria existente
+    function editCategory(idx) {
+        const cats = loadCategories();
+        const current = cats[idx];
+        const newName = prompt('Novo nome para a categoria "' + current.name + '":', current.name);
+        if (newName === null) return;
+        const trimmedName = newName.trim();
+        // Verifica se já existe outra categoria com esse nome (exceto a atual)
+        if (!trimmedName || cats.some((c, i) => i !== idx && c.name === trimmedName)) {
+            alert('Categoria inválida ou já existente.');
+            return;
+        }
+        // Pergunta novo orçamento
+        const budgetStr = prompt('Novo orçamento mensal (deixe em branco para nenhum):', current.budget != null ? current.budget : '');
+        let newBudget = null;
+        if (budgetStr !== null && budgetStr.trim() !== '') {
+            // aceita vírgula ou ponto como separador decimal
+            const normalized = budgetStr.replace(',', '.');
+            const parsed = parseFloat(normalized);
+            if (!isNaN(parsed) && parsed >= 0) {
+                newBudget = parsed;
+            }
+        }
+        const data = loadData();
+        // Atualiza todas as movimentações e custos fixos com o novo nome
+        data.txs.forEach(tx => { if (tx.category === current.name) tx.category = trimmedName; });
+        data.fix.forEach(f => { if (f.category === current.name) f.category = trimmedName; });
+        cats[idx] = { name: trimmedName, budget: newBudget };
+        saveCategories(cats);
+        saveData(data.txs, data.fix);
+        renderCategoryList();
+        renderCategoryOptions();
+        renderDashboard();
+    }
+
+    // Remove uma categoria e atualiza transações e custos fixos
+    function deleteCategory(idx) {
+        const cats = loadCategories();
+        const cat = cats[idx];
+        // confirma exclusão exibindo o nome
+        if (!confirm('Deseja realmente excluir a categoria "' + cat.name + '"?')) return;
+        cats.splice(idx, 1);
+        const data = loadData();
+        // Remove a categoria das movimentações e custos fixos
+        data.txs.forEach(tx => { if (tx.category === cat.name) tx.category = ''; });
+        data.fix.forEach(f => { if (f.category === cat.name) f.category = ''; });
+        saveCategories(cats);
+        saveData(data.txs, data.fix);
+        renderCategoryList();
+        renderCategoryOptions();
+        renderDashboard();
+    }
+
+    // Renderiza lista de categorias na seção de categorias
+    function renderCategoryList() {
+        const cats = loadCategories();
+        const list = document.getElementById('categoryList');
+        if (!list) return;
+        list.innerHTML = '';
+        cats.forEach((cat, idx) => {
+            const li = document.createElement('li');
+            // texto da categoria com orçamento
+            const span = document.createElement('span');
+            let label = cat.name;
+            if (cat.budget != null) {
+                label += ' (Orçamento: ' + cat.budget.toLocaleString('pt-BR', {style:'currency', currency:'BRL'}) + ')';
+            }
+            span.textContent = label;
+            li.appendChild(span);
+            // botão editar
+            const editBtn = document.createElement('button');
+            editBtn.type = 'button';
+            editBtn.textContent = 'Editar';
+            editBtn.style.marginLeft = '8px';
+            editBtn.onclick = function() { editCategory(idx); };
+            li.appendChild(editBtn);
+            // botão excluir
+            const delBtn = document.createElement('button');
+            delBtn.type = 'button';
+            delBtn.textContent = 'Excluir';
+            delBtn.style.marginLeft = '4px';
+            delBtn.onclick = function() { deleteCategory(idx); };
+            li.appendChild(delBtn);
+            list.appendChild(li);
+        });
+    }
+
+    // Atualiza as opções de categoria nos formulários de lançamento e fixos
+    function renderCategoryOptions() {
+        const cats = loadCategories();
+        const selects = document.querySelectorAll('.category-select');
+        selects.forEach(sel => {
+            // Limpa opções existentes
+            sel.innerHTML = '';
+            cats.forEach(cat => {
+                const option = document.createElement('option');
+                option.value = cat.name;
+                option.textContent = cat.name;
+                sel.appendChild(option);
+            });
+            // Caso não existam categorias, adiciona uma opção vazia
+            if (cats.length === 0) {
+                const option = document.createElement('option');
+                option.value = '';
+                option.textContent = '— sem categorias cadastradas —';
+                sel.appendChild(option);
+            }
+        });
+        // Atualiza o seletor de filtro de categoria, se existir
+        const filterSel = document.getElementById('filterCategory');
+        if (filterSel) {
+            const currentVal = filterSel.value;
+            filterSel.innerHTML = '';
+            const allOption = document.createElement('option');
+            allOption.value = '';
+            allOption.textContent = 'Todas';
+            filterSel.appendChild(allOption);
+            cats.forEach(cat => {
+                const opt = document.createElement('option');
+                opt.value = cat.name;
+                opt.textContent = cat.name;
+                filterSel.appendChild(opt);
+            });
+            filterSel.value = currentVal;
+        }
+    }
+
+    function loadData() {
+        const txs = JSON.parse(localStorage.getItem(STORAGE_KEYS.transactions) || '[]');
+        const fix = JSON.parse(localStorage.getItem(STORAGE_KEYS.fixedCosts) || '[]');
+        return { txs, fix };
+    }
+
+    function saveData(txs, fix) {
+        localStorage.setItem(STORAGE_KEYS.transactions, JSON.stringify(txs));
+        localStorage.setItem(STORAGE_KEYS.fixedCosts, JSON.stringify(fix));
+    }
+
+    function showSection(id) {
+        document.querySelectorAll('section').forEach(sec => sec.classList.remove('active'));
+        document.getElementById(id).classList.add('active');
+        if (id === 'dashboard') {
+            renderDashboard();
+        }
+        if (id === 'categories') {
+            renderCategoryList();
+            renderCategoryOptions();
+        }
+    }
+
+    function addTransaction(event) {
+        event.preventDefault();
+        const txs = JSON.parse(localStorage.getItem(STORAGE_KEYS.transactions) || '[]');
+        const transaction = {
+            date: document.getElementById('transDate').value,
+            category: document.getElementById('transCategory').value.trim(),
+            description: document.getElementById('transDescription').value.trim(),
+            type: document.getElementById('transType').value,
+            value: parseFloat(document.getElementById('transValue').value),
+            payment: document.getElementById('transPayment').value.trim(),
+            notes: document.getElementById('transNotes').value.trim(),
+            source: 'tx'
+        };
+        txs.push(transaction);
+        localStorage.setItem(STORAGE_KEYS.transactions, JSON.stringify(txs));
+        alert('Lançamento salvo com sucesso!');
+        document.getElementById('transactionForm').reset();
+    }
+
+    function addFixedCost(event) {
+        event.preventDefault();
+        const fix = JSON.parse(localStorage.getItem(STORAGE_KEYS.fixedCosts) || '[]');
+        const fixed = {
+            name: document.getElementById('fixName').value.trim(),
+            category: document.getElementById('fixCategory').value.trim(),
+            value: parseFloat(document.getElementById('fixValue').value),
+            day: parseInt(document.getElementById('fixDay').value, 10),
+            payment: document.getElementById('fixPayment').value.trim(),
+            notes: document.getElementById('fixNotes').value.trim(),
+            active: document.getElementById('fixActive').checked,
+            // registra a data de inserção para limitar geração futura
+            startDate: new Date().toISOString().slice(0,10)
+        };
+        fix.push(fixed);
+        localStorage.setItem(STORAGE_KEYS.fixedCosts, JSON.stringify(fix));
+        alert('Custo fixo salvo com sucesso!');
+        document.getElementById('fixedForm').reset();
+    }
+
+    function applyFilters() {
+        renderDashboard();
+    }
+
+    function resetFilters() {
+        document.getElementById('startDate').value = '';
+        document.getElementById('endDate').value = '';
+        renderDashboard();
+    }
+
+    // Gera transações a partir de custos fixos dentro de um período
+    function generateFixedTransactions(fixedCosts, startDate, endDate) {
+        const results = [];
+        fixedCosts.forEach((fix, fi) => {
+            if (!fix.active) return;
+            // determina a data de início válida para este custo fixo
+            const fixStart = fix.startDate ? fix.startDate : null;
+            const start = new Date(startDate);
+            const end = new Date(endDate);
+            // normalize início e fim para o primeiro dia do mês
+            start.setDate(1);
+            end.setDate(1);
+            const current = new Date(start);
+            while (current <= end) {
+                const year = current.getFullYear();
+                const month = current.getMonth();
+                const lastDay = new Date(year, month + 1, 0).getDate();
+                const day = Math.min(fix.day, lastDay);
+                const dateStr = new Date(year, month, day).toISOString().slice(0,10);
+                // ignora meses anteriores à data de inserção, se existir
+                if (fixStart && dateStr < fixStart) {
+                    current.setMonth(current.getMonth() + 1);
+                    continue;
+                }
+                if (dateStr >= startDate && dateStr <= endDate) {
+                    results.push({
+                        date: dateStr,
+                        category: fix.category,
+                        description: fix.name,
+                        type: 'Despesa',
+                        value: fix.value,
+                        payment: fix.payment,
+                        notes: (fix.notes || '') + ' (fixo)',
+                        source: 'fix',
+                        fixIndex: fi
+                    });
+                }
+                current.setMonth(current.getMonth() + 1);
+            }
+        });
+        return results;
+    }
+
+    function renderDashboard() {
+        // obtém dados e filtros
+        const { txs, fix } = loadData();
+        let start = document.getElementById('startDate').value;
+        let end = document.getElementById('endDate').value;
+        const today = new Date();
+        const currentYear = today.getFullYear();
+        if (!start) start = `${currentYear}-01-01`;
+        if (!end) end = `${currentYear}-12-31`;
+        // filtros adicionais
+        const catFilterEl = document.getElementById('filterCategory');
+        const descFilterEl = document.getElementById('filterDescription');
+        const catFilter = catFilterEl ? catFilterEl.value : '';
+        const descFilter = descFilterEl ? descFilterEl.value.toLowerCase() : '';
+        // Filtra lançamentos com índice
+        const filteredTxRows = [];
+        txs.forEach((tx, idx) => {
+            if (tx.date >= start && tx.date <= end) {
+                if (catFilter && tx.category !== catFilter) return;
+                if (descFilter && !tx.description.toLowerCase().includes(descFilter)) return;
+                filteredTxRows.push(Object.assign({}, tx, { source: 'tx', txIndex: idx }));
+            }
+        });
+        // Filtra transações geradas a partir de custos fixos
+        const fixedTxs = generateFixedTransactions(fix, start, end).filter(tx => {
+            if (catFilter && tx.category !== catFilter) return false;
+            if (descFilter && !tx.description.toLowerCase().includes(descFilter)) return false;
+            return true;
+        });
+        // Combina e ordena por data
+        const allRows = filteredTxRows.concat(fixedTxs);
+        allRows.sort((a, b) => a.date.localeCompare(b.date));
+        // Calcula totais e somas por categoria
+        let totalIncome = 0, totalExpense = 0;
+        const categoryTotals = {};
+        allRows.forEach(row => {
+            if (row.type === 'Receita') {
+                totalIncome += row.value;
+            } else {
+                totalExpense += row.value;
+                if (!categoryTotals[row.category]) categoryTotals[row.category] = 0;
+                categoryTotals[row.category] += row.value;
+            }
+        });
+        const net = totalIncome - totalExpense;
+        document.getElementById('totalIncome').textContent = totalIncome.toLocaleString('pt-BR', {style:'currency', currency:'BRL'});
+        document.getElementById('totalExpense').textContent = totalExpense.toLocaleString('pt-BR', {style:'currency', currency:'BRL'});
+        const netEl = document.getElementById('netBalance');
+        netEl.textContent = net.toLocaleString('pt-BR', {style:'currency', currency:'BRL'});
+        netEl.className = net >= 0 ? 'positive' : 'negative';
+        // Monta gráfico de categorias
+        const labels = Object.keys(categoryTotals);
+        const values = labels.map(cat => categoryTotals[cat]);
+        // Obtém orçamentos das categorias, alinhando à ordem das labels
+        const cats = loadCategories();
+        const budgetsArr = labels.map(cat => {
+            const obj = cats.find(c => c.name === cat);
+            return obj && obj.budget != null ? obj.budget : 0;
+        });
+        // Define cores dos bares: vermelho para categorias que ultrapassaram o orçamento, cor gerada para o restante
+        const barColors = labels.map((cat, i) => {
+            const spent = values[i];
+            const budget = budgetsArr[i];
+            if (budget && spent > budget) {
+                return 'rgba(255, 99, 132, 0.8)'; // vermelho para excedido
+            }
+            return stringToColor(cat);
+        });
+        if (categoryChart) {
+            try { categoryChart.destroy(); } catch (e) {}
+        }
+        const canvas = document.getElementById('categoryChartCanvas');
+        if (canvas) {
+            const ctx = canvas.getContext('2d');
+            categoryChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'Despesas',
+                            data: values,
+                            backgroundColor: barColors,
+                        },
+                        {
+                            label: 'Orçamento',
+                            data: budgetsArr,
+                            backgroundColor: labels.map(() => 'rgba(0, 0, 0, 0.1)'),
+                            borderColor: labels.map(() => '#888'),
+                            borderWidth: 1,
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+        }
+        // Gera avisos se alguma categoria extrapolou o orçamento
+        const warningsDiv = document.getElementById('budgetWarnings');
+        if (warningsDiv) {
+            const overspent = labels.filter((cat, i) => budgetsArr[i] && values[i] > budgetsArr[i]);
+            if (overspent.length > 0) {
+                warningsDiv.textContent = 'Orçamento excedido nas categorias: ' + overspent.join(', ');
+            } else {
+                warningsDiv.textContent = '';
+            }
+        }
+        // Monta tabela de movimentos
+        const tableDiv = document.getElementById('transactionsTable');
+        tableDiv.innerHTML = '';
+        if (allRows.length === 0) {
+            tableDiv.textContent = 'Nenhuma movimentação no período selecionado.';
+            return;
+        }
+        const table = document.createElement('table');
+        const thead = document.createElement('thead');
+        thead.innerHTML = '<tr><th>Data</th><th>Categoria</th><th>Descrição</th><th>Tipo</th><th>Valor</th><th>Forma</th><th>Observações</th><th>Ações</th></tr>';
+        table.appendChild(thead);
+        const tbody = document.createElement('tbody');
+        allRows.forEach(row => {
+            const tr = document.createElement('tr');
+            const valString = row.value.toLocaleString('pt-BR', {style:'currency', currency:'BRL'});
+            tr.innerHTML = `<td>${row.date}</td><td>${row.category}</td><td>${row.description}</td><td>${row.type}</td><td>${valString}</td><td>${row.payment}</td><td>${row.notes}</td>`;
+            const actionsTd = document.createElement('td');
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.textContent = 'Excluir';
+            if (row.source === 'tx') {
+                btn.onclick = function() { deleteRow('tx', row.txIndex); };
+            } else if (row.source === 'fix') {
+                btn.onclick = function() { deleteRow('fix', row.fixIndex); };
+            }
+            actionsTd.appendChild(btn);
+            tr.appendChild(actionsTd);
+            tbody.appendChild(tr);
+        });
+        table.appendChild(tbody);
+        tableDiv.appendChild(table);
+    }
+
+    function stringToColor(str) {
+        let hash = 0;
+        for (let i = 0; i < str.length; i++) {
+            hash = str.charCodeAt(i) + ((hash << 5) - hash);
+        }
+        let color = '#';
+        for (let i = 0; i < 3; i++) {
+            const value = (hash >> (i * 8)) & 0xFF;
+            color += ('00' + value.toString(16)).substr(-2);
+        }
+        return color;
+    }
+
+    /**
+     * Remove uma movimentação ou custo fixo
+     * @param {string} type - 'tx' para transação, 'fix' para custo fixo
+     * @param {number} idx - índice no array correspondente
+     */
+    function deleteRow(type, idx) {
+        if (!confirm('Deseja realmente excluir este item?')) return;
+        const data = loadData();
+        if (type === 'tx') {
+            if (idx >= 0 && idx < data.txs.length) {
+                data.txs.splice(idx, 1);
+            }
+        } else if (type === 'fix') {
+            if (idx >= 0 && idx < data.fix.length) {
+                data.fix.splice(idx, 1);
+            }
+        }
+        saveData(data.txs, data.fix);
+        renderDashboard();
+    }
+
+    function exportCSV() {
+        const { txs, fix } = loadData();
+        let start = document.getElementById('startDate').value;
+        let end = document.getElementById('endDate').value;
+        const today = new Date();
+        const currentYear = today.getFullYear();
+        if (!start) start = `${currentYear}-01-01`;
+        if (!end) end = `${currentYear}-12-31`;
+        const filteredTxs = txs.filter(tx => tx.date >= start && tx.date <= end);
+        const fixedTxs = generateFixedTransactions(fix, start, end);
+        const allTxs = filteredTxs.concat(fixedTxs).sort((a,b) => a.date.localeCompare(b.date));
+        let csv = 'Data,Categoria,Descrição,Tipo,Valor,Forma,Observações\n';
+        allTxs.forEach(tx => {
+            const row = [tx.date, tx.category, tx.description, tx.type, tx.value.toString().replace('.',','), tx.payment, tx.notes];
+            csv += row.map(v => '"' + v.replace(/"/g, '""') + '"').join(',') + '\n';
+        });
+        const blob = new Blob([csv], {type: 'text/csv;charset=utf-8;'});
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.setAttribute('href', url);
+        link.setAttribute('download', 'movimentacoes.csv');
+        link.style.display = 'none';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+
+    window.onload = function() {
+        // Se não houver categorias cadastradas, cria algumas sugestões padrão
+        ensureDefaultCategories();
+        renderCategoryList();
+        renderCategoryOptions();
+        renderDashboard();
+    };
+    </script>
+</body>
+</html>
