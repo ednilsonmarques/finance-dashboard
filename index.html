@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Painel Financeiro Pessoal</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        h1 {
+            font-size: 24px;
+            margin-bottom: 10px;
+        }
+        nav button {
+            margin-right: 10px;
+            padding: 8px 12px;
+        }
+        section {
+            display: none;
+            margin-top: 20px;
+        }
+        section.active {
+            display: block;
+        }
+        form label {
+            display: block;
+            margin-bottom: 8px;
+        }
+        form input, form select, form textarea {
+            width: 100%;
+            padding: 6px;
+            margin-top: 2px;
+            margin-bottom: 10px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        th, td {
+            border: 1px solid #ccc;
+            padding: 6px;
+            text-align: left;
+        }
+        thead {
+            background: #eee;
+        }
+        .bar-chart {
+            margin-top: 20px;
+        }
+        .bar {
+            height: 22px;
+            margin-bottom: 5px;
+            color: #fff;
+            text-align: right;
+            padding-right: 5px;
+            border-radius: 3px;
+        }
+        .positive {
+            color: green;
+        }
+        .negative {
+            color: red;
+        }
+    </style>
+</head>
+<body>
+    <h1>Painel Financeiro Pessoal</h1>
+    <nav>
+        <button onclick="showSection('transaction')">Adicionar Lançamento</button>
+        <button onclick="showSection('fixed')">Cadastrar Custo Fixo</button>
+        <button onclick="showSection('dashboard')">Dashboard</button>
+    </nav>
+
+    <!-- Formulário de lançamentos -->
+    <section id="transaction" class="active">
+        <h2>Adicionar Lançamento</h2>
+        <form id="transactionForm" onsubmit="addTransaction(event)">
+            <label>
+                Data:
+                <input type="date" id="transDate" required>
+            </label>
+            <label>
+                Categoria:
+                <input type="text" id="transCategory" placeholder="Ex: Alimentação" required>
+            </label>
+            <label>
+                Descrição:
+                <input type="text" id="transDescription" required>
+            </label>
+            <label>
+                Tipo:
+                <select id="transType" required>
+                    <option value="Receita">Receita</option>
+                    <option value="Despesa">Despesa</option>
+                </select>
+            </label>
+            <label>
+                Valor:
+                <input type="number" id="transValue" step="0.01" min="0" required>
+            </label>
+            <label>
+                Forma de Pagamento:
+                <input type="text" id="transPayment" placeholder="Ex: Cartão, Boleto">
+            </label>
+            <label>
+                Observações:
+                <textarea id="transNotes"></textarea>
+            </label>
+            <button type="submit">Salvar Lançamento</button>
+        </form>
+    </section>
+
+    <!-- Formulário de custos fixos -->
+    <section id="fixed">
+        <h2>Cadastrar Custo Fixo</h2>
+        <form id="fixedForm" onsubmit="addFixedCost(event)">
+            <label>
+                Nome:
+                <input type="text" id="fixName" required>
+            </label>
+            <label>
+                Categoria:
+                <input type="text" id="fixCategory" placeholder="Ex: Moradia, Transporte" required>
+            </label>
+            <label>
+                Valor:
+                <input type="number" id="fixValue" step="0.01" min="0" required>
+            </label>
+            <label>
+                Dia de Vencimento (1-31):
+                <input type="number" id="fixDay" min="1" max="31" required>
+            </label>
+            <label>
+                Forma de Pagamento:
+                <input type="text" id="fixPayment" placeholder="Ex: Conta corrente, Cartão">
+            </label>
+            <label>
+                Observações:
+                <textarea id="fixNotes"></textarea>
+            </label>
+            <label>
+                Ativo:
+                <input type="checkbox" id="fixActive" checked>
+            </label>
+            <button type="submit">Salvar Custo Fixo</button>
+        </form>
+    </section>
+
+    <!-- Dashboard -->
+    <section id="dashboard">
+        <h2>Dashboard</h2>
+        <div id="filters">
+            <label>
+                Data Inicial:
+                <input type="date" id="startDate" onchange="applyFilters()">
+            </label>
+            <label>
+                Data Final:
+                <input type="date" id="endDate" onchange="applyFilters()">
+            </label>
+            <button onclick="resetFilters()">Limpar Filtros</button>
+            <button onclick="exportCSV()">Exportar CSV</button>
+        </div>
+        <div id="summary">
+            <p>Total de Receitas: <span id="totalIncome">0</span></p>
+            <p>Total de Despesas: <span id="totalExpense">0</span></p>
+            <p>Saldo: <span id="netBalance">0</span></p>
+        </div>
+        <div id="categoryChart" class="bar-chart"></div>
+        <div id="transactionsTable"></div>
+    </section>
+
+    <script>
+    // Armazena dados em localStorage
+    const STORAGE_KEYS = {
+        transactions: 'pf_transactions',
+        fixedCosts: 'pf_fixed_costs'
+    };
+
+    function loadData() {
+        const txs = JSON.parse(localStorage.getItem(STORAGE_KEYS.transactions) || '[]');
+        const fix = JSON.parse(localStorage.getItem(STORAGE_KEYS.fixedCosts) || '[]');
+        return { txs, fix };
+    }
+
+    function saveData(txs, fix) {
+        localStorage.setItem(STORAGE_KEYS.transactions, JSON.stringify(txs));
+        localStorage.setItem(STORAGE_KEYS.fixedCosts, JSON.stringify(fix));
+    }
+
+    function showSection(id) {
+        document.querySelectorAll('section').forEach(sec => sec.classList.remove('active'));
+        document.getElementById(id).classList.add('active');
+        if (id === 'dashboard') {
+            renderDashboard();
+        }
+    }
+
+    function addTransaction(event) {
+        event.preventDefault();
+        const txs = JSON.parse(localStorage.getItem(STORAGE_KEYS.transactions) || '[]');
+        const transaction = {
+            date: document.getElementById('transDate').value,
+            category: document.getElementById('transCategory').value.trim(),
+            description: document.getElementById('transDescription').value.trim(),
+            type: document.getElementById('transType').value,
+            value: parseFloat(document.getElementById('transValue').value),
+            payment: document.getElementById('transPayment').value.trim(),
+            notes: document.getElementById('transNotes').value.trim()
+        };
+        txs.push(transaction);
+        localStorage.setItem(STORAGE_KEYS.transactions, JSON.stringify(txs));
+        alert('Lançamento salvo com sucesso!');
+        document.getElementById('transactionForm').reset();
+    }
+
+    function addFixedCost(event) {
+        event.preventDefault();
+        const fix = JSON.parse(localStorage.getItem(STORAGE_KEYS.fixedCosts) || '[]');
+        const fixed = {
+            name: document.getElementById('fixName').value.trim(),
+            category: document.getElementById('fixCategory').value.trim(),
+            value: parseFloat(document.getElementById('fixValue').value),
+            day: parseInt(document.getElementById('fixDay').value, 10),
+            payment: document.getElementById('fixPayment').value.trim(),
+            notes: document.getElementById('fixNotes').value.trim(),
+            active: document.getElementById('fixActive').checked
+        };
+        fix.push(fixed);
+        localStorage.setItem(STORAGE_KEYS.fixedCosts, JSON.stringify(fix));
+        alert('Custo fixo salvo com sucesso!');
+        document.getElementById('fixedForm').reset();
+    }
+
+    function applyFilters() {
+        renderDashboard();
+    }
+
+    function resetFilters() {
+        document.getElementById('startDate').value = '';
+        document.getElementById('endDate').value = '';
+        renderDashboard();
+    }
+
+    // Gera transações a partir de custos fixos dentro de um período
+    function generateFixedTransactions(fixedCosts, startDate, endDate) {
+        const results = [];
+        fixedCosts.forEach(fix => {
+            if (!fix.active) return;
+            const start = new Date(startDate);
+            const end = new Date(endDate);
+            start.setDate(1);
+            end.setDate(1);
+            const current = new Date(start);
+            while (current <= end) {
+                const year = current.getFullYear();
+                const month = current.getMonth();
+                const lastDay = new Date(year, month + 1, 0).getDate();
+                const day = Math.min(fix.day, lastDay);
+                const dateStr = new Date(year, month, day).toISOString().slice(0,10);
+                if (dateStr >= startDate && dateStr <= endDate) {
+                    results.push({
+                        date: dateStr,
+                        category: fix.category,
+                        description: fix.name,
+                        type: 'Despesa',
+                        value: fix.value,
+                        payment: fix.payment,
+                        notes: (fix.notes || '') + ' (fixo)'
+                    });
+                }
+                current.setMonth(current.getMonth() + 1);
+            }
+        });
+        return results;
+    }
+
+    function renderDashboard() {
+        const { txs, fix } = loadData();
+        let start = document.getElementById('startDate').value;
+        let end = document.getElementById('endDate').value;
+        const today = new Date();
+        const currentYear = today.getFullYear();
+        if (!start) start = `${currentYear}-01-01`;
+        if (!end) end = `${currentYear}-12-31`;
+        const filteredTxs = txs.filter(tx => tx.date >= start && tx.date <= end);
+        const fixedTxs = generateFixedTransactions(fix, start, end);
+        const allTxs = filteredTxs.concat(fixedTxs);
+        allTxs.sort((a,b) => a.date.localeCompare(b.date));
+        let totalIncome = 0, totalExpense = 0;
+        const categoryTotals = {};
+        allTxs.forEach(tx => {
+            if (tx.type === 'Receita') {
+                totalIncome += tx.value;
+            } else {
+                totalExpense += tx.value;
+                if (!categoryTotals[tx.category]) categoryTotals[tx.category] = 0;
+                categoryTotals[tx.category] += tx.value;
+            }
+        });
+        const net = totalIncome - totalExpense;
+        document.getElementById('totalIncome').textContent = totalIncome.toLocaleString('pt-BR', {style:'currency', currency:'BRL'});
+        document.getElementById('totalExpense').textContent = totalExpense.toLocaleString('pt-BR', {style:'currency', currency:'BRL'});
+        const netEl = document.getElementById('netBalance');
+        netEl.textContent = net.toLocaleString('pt-BR', {style:'currency', currency:'BRL'});
+        netEl.className = net >= 0 ? 'positive' : 'negative';
+        const chartDiv = document.getElementById('categoryChart');
+        chartDiv.innerHTML = '';
+        let maxVal = 0;
+        Object.values(categoryTotals).forEach(val => { if (val > maxVal) maxVal = val; });
+        for (const [cat, val] of Object.entries(categoryTotals)) {
+            const bar = document.createElement('div');
+            bar.className = 'bar';
+            const percent = maxVal ? (val / maxVal * 100) : 0;
+            bar.style.width = percent + '%';
+            bar.style.backgroundColor = stringToColor(cat);
+            bar.textContent = `${cat}: ${val.toLocaleString('pt-BR', {style:'currency', currency:'BRL'})}`;
+            chartDiv.appendChild(bar);
+        }
+        const tableDiv = document.getElementById('transactionsTable');
+        tableDiv.innerHTML = '';
+        if (allTxs.length === 0) {
+            tableDiv.textContent = 'Nenhuma movimentação no período selecionado.';
+            return;
+        }
+        const table = document.createElement('table');
+        const thead = document.createElement('thead');
+        thead.innerHTML = '<tr><th>Data</th><th>Categoria</th><th>Descrição</th><th>Tipo</th><th>Valor</th><th>Forma</th><th>Observações</th></tr>';
+        table.appendChild(thead);
+        const tbody = document.createElement('tbody');
+        allTxs.forEach(tx => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `<td>${tx.date}</td><td>${tx.category}</td><td>${tx.description}</td><td>${tx.type}</td><td>${tx.value.toLocaleString('pt-BR', {style:'currency', currency:'BRL'})}</td><td>${tx.payment}</td><td>${tx.notes}</td>`;
+            tbody.appendChild(tr);
+        });
+        table.appendChild(tbody);
+        tableDiv.appendChild(table);
+    }
+
+    function stringToColor(str) {
+        let hash = 0;
+        for (let i = 0; i < str.length; i++) {
+            hash = str.charCodeAt(i) + ((hash << 5) - hash);
+        }
+        let color = '#';
+        for (let i = 0; i < 3; i++) {
+            const value = (hash >> (i * 8)) & 0xFF;
+            color += ('00' + value.toString(16)).substr(-2);
+        }
+        return color;
+    }
+
+    function exportCSV() {
+        const { txs, fix } = loadData();
+        let start = document.getElementById('startDate').value;
+        let end = document.getElementById('endDate').value;
+        const today = new Date();
+        const currentYear = today.getFullYear();
+        if (!start) start = `${currentYear}-01-01`;
+        if (!end) end = `${currentYear}-12-31`;
+        const filteredTxs = txs.filter(tx => tx.date >= start && tx.date <= end);
+        const fixedTxs = generateFixedTransactions(fix, start, end);
+        const allTxs = filteredTxs.concat(fixedTxs).sort((a,b) => a.date.localeCompare(b.date));
+        let csv = 'Data,Categoria,Descrição,Tipo,Valor,Forma,Observações\n';
+        allTxs.forEach(tx => {
+            const row = [tx.date, tx.category, tx.description, tx.type, tx.value.toString().replace('.',','), tx.payment, tx.notes];
+            csv += row.map(v => '"' + v.replace(/"/g, '""') + '"').join(',') + '\n';
+        });
+        const blob = new Blob([csv], {type: 'text/csv;charset=utf-8;'});
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.setAttribute('href', url);
+        link.setAttribute('download', 'movimentacoes.csv');
+        link.style.display = 'none';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+
+    window.onload = function() {
+        renderDashboard();
+    };
+    </script>
+</body>
+</html>
