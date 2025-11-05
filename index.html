@@ -1,0 +1,1694 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <!-- Garante responsividade em dispositivos móveis -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel Financeiro Pessoal</title>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            padding: 0;
+            background: #f8f9fa;
+            color: #333;
+        }
+        h1 {
+            font-size: 24px;
+            margin-bottom: 10px;
+        }
+        nav {
+            margin: 0 20px;
+            padding: 15px;
+            display: flex;
+            gap: 10px;
+            background: #ffffff;
+            border-radius: 8px;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+        }
+        nav button {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            background-color: #007bff;
+            color: #fff;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        nav button:hover {
+            background-color: #0056b3;
+        }
+
+        /* Ajustes para dispositivos móveis */
+        @media (max-width: 600px) {
+            nav {
+                flex-wrap: wrap;
+            }
+            nav button {
+                flex: 1 1 calc(50% - 10px);
+            }
+        }
+        section {
+            display: none;
+            margin: 20px;
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+        }
+        section.active {
+            display: block;
+        }
+        form label {
+            display: block;
+            margin-bottom: 8px;
+        }
+        form input, form select, form textarea {
+            width: 100%;
+            padding: 8px;
+            margin-top: 4px;
+            margin-bottom: 12px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        form button {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            background-color: #28a745;
+            color: #fff;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        form button:hover {
+            background-color: #218838;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+            background: #fff;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        thead {
+            background: #f0f0f0;
+        }
+        tbody tr:nth-child(odd) {
+            background: #f9f9f9;
+        }
+        .positive {
+            color: green;
+            font-weight: bold;
+        }
+        .negative {
+            color: red;
+            font-weight: bold;
+        }
+
+        /* Estilo do resumo no dashboard */
+        #summary p {
+            font-size: 16px;
+            margin-bottom: 6px;
+        }
+        #summary span {
+            font-weight: bold;
+        }
+
+        /* Painéis modernizados para o dashboard */
+        .summary-cards {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        .summary-card {
+            flex: 1 1 200px;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: flex-start;
+        }
+        .summary-card .card-title {
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+        .summary-card .card-value {
+            font-size: 22px;
+            font-weight: 700;
+        }
+        .summary-card.income {
+            background: #e6f7ed;
+            color: #28a745;
+        }
+        .summary-card.expense {
+            background: #fdecee;
+            color: #dc3545;
+        }
+        .summary-card.net {
+            background: #e7f1ff;
+            color: #007bff;
+        }
+        /* Container de filtros em linha */
+        .filters-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        .filters-container label {
+            display: flex;
+            flex-direction: column;
+            font-size: 14px;
+        }
+        .filters-container button {
+            align-self: flex-end;
+            height: 38px;
+        }
+        /* Cartões para gráficos e tabelas */
+        .card {
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+            margin-bottom: 20px;
+        }
+    </style>
+
+        <!-- Google Fonts and Chart.js library for interactive charts -->
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <h1>Painel Financeiro Pessoal</h1>
+    <nav>
+        <button onclick="showSection('transaction')">Adicionar Lançamento</button>
+        <button onclick="showSection('fixed')">Cadastrar Custo Fixo</button>
+        <button onclick="showSection('dashboard')">Dashboard</button>
+        <button onclick="showSection('categories')">Categorias</button>
+        <!-- Novo botão para importação de extratos -->
+        <button onclick="showSection('import')">Importar Extrato</button>
+        <!-- Novo botão para gerenciamento de formas de pagamento -->
+        <button onclick="showSection('paymentMethods')">Formas de Pagamento</button>
+        <!-- Botão para backup e sincronização -->
+        <button onclick="showSection('sync')">Backup/Sincronização</button>
+    </nav>
+
+    <!-- Formulário de lançamentos -->
+    <section id="transaction" class="active">
+        <h2>Adicionar Lançamento</h2>
+        <form id="transactionForm" onsubmit="addTransaction(event)">
+            <label>
+                Data:
+                <input type="date" id="transDate" required>
+            </label>
+            <label>
+                Categoria:
+                <select id="transCategory" class="category-select" required></select>
+            </label>
+            <label>
+                Descrição:
+                <input type="text" id="transDescription" required>
+            </label>
+            <label>
+                Tipo:
+                <select id="transType" required>
+                    <option value="Receita">Receita</option>
+                    <option value="Despesa">Despesa</option>
+                </select>
+            </label>
+            <label>
+                Valor:
+                <input type="number" id="transValue" step="0.01" min="0" required>
+            </label>
+            <label>
+                Forma de Pagamento:
+                <select id="transPayment" class="payment-select" required></select>
+            </label>
+            <label>
+                Observações:
+                <textarea id="transNotes"></textarea>
+            </label>
+            <button type="submit">Salvar Lançamento</button>
+        </form>
+    </section>
+
+    <!-- Seção de gerenciamento de formas de pagamento -->
+    <section id="paymentMethods">
+        <h2>Gerenciar Formas de Pagamento</h2>
+        <form id="paymentForm" onsubmit="addPaymentMethod(event)">
+            <label>
+                Nome da Forma:
+                <input type="text" id="paymentName" required>
+            </label>
+            <button type="submit">Adicionar Forma</button>
+        </form>
+        <ul id="paymentList" style="list-style-type: none; padding: 0;"></ul>
+    </section>
+
+    <!-- Seção de backup e sincronização -->
+    <section id="sync">
+        <h2>Backup e Sincronização</h2>
+        <p>Use estas opções para exportar todos os seus dados (categorias, formas de pagamento, lançamentos e custos fixos) para um arquivo JSON ou importar um arquivo JSON compatível. Compartilhe o arquivo com outras pessoas para sincronizar os lançamentos entre dispositivos.</p>
+        <div style="margin-bottom: 16px;">
+            <button type="button" onclick="exportData()">Exportar Dados (JSON)</button>
+        </div>
+        <div>
+            <label>Importar arquivo JSON:
+                <input type="file" id="importDataFile" accept="application/json" />
+            </label>
+            <button type="button" onclick="handleImportData()">Importar JSON</button>
+        </div>
+
+        <!-- Exportação de dados como texto -->
+        <div style="margin-top: 24px;">
+            <h3>Exportar dados como texto</h3>
+            <p>Gere o conteúdo JSON e copie para compartilhar com outros dispositivos. Basta colar o texto exportado na área de importação abaixo no outro dispositivo.</p>
+            <textarea id="exportDataText" rows="8" style="width:100%;" readonly></textarea>
+            <button type="button" onclick="exportDataToText(); copyExportData()">Gerar e Copiar</button>
+        </div>
+
+        <!-- Importação de dados a partir de texto -->
+        <div style="margin-top: 24px;">
+            <h3>Importar dados de texto</h3>
+            <p>Cole aqui o JSON exportado de outro dispositivo para importar e substituir seus dados atuais.</p>
+            <textarea id="importDataText" rows="8" style="width:100%;"></textarea>
+            <button type="button" onclick="importDataFromText()">Importar do texto</button>
+        </div>
+    </section>
+
+    <!-- Formulário de custos fixos -->
+    <section id="fixed">
+        <h2>Cadastrar Custo Fixo</h2>
+        <form id="fixedForm" onsubmit="addFixedCost(event)">
+            <label>
+                Nome:
+                <input type="text" id="fixName" required>
+            </label>
+            <label>
+                Categoria:
+                <select id="fixCategory" class="category-select" required></select>
+            </label>
+            <label>
+                Valor:
+                <input type="number" id="fixValue" step="0.01" min="0" required>
+            </label>
+            <label>
+                Dia de Vencimento (1-31):
+                <input type="number" id="fixDay" min="1" max="31" required>
+            </label>
+            <label>
+                Forma de Pagamento:
+                <select id="fixPayment" class="payment-select" required></select>
+            </label>
+            <label>
+                Observações:
+                <textarea id="fixNotes"></textarea>
+            </label>
+            <label>
+                Ativo:
+                <input type="checkbox" id="fixActive" checked>
+            </label>
+            <button type="submit">Salvar Custo Fixo</button>
+        </form>
+    </section>
+
+    <!-- Dashboard -->
+    <section id="dashboard">
+        <h2>Dashboard</h2>
+        <div id="filters" class="filters-container">
+            <label>
+                Data Inicial:
+                <input type="date" id="startDate" onchange="applyFilters()">
+            </label>
+            <label>
+                Data Final:
+                <input type="date" id="endDate" onchange="applyFilters()">
+            </label>
+            <label>
+                Categoria:
+                <select id="filterCategory" onchange="applyFilters()">
+                    <option value="">Todas</option>
+                </select>
+            </label>
+            <label>
+                Pesquisar descrição:
+                <input type="text" id="filterDescription" oninput="applyFilters()">
+            </label>
+            <label>
+                Forma de Pagamento:
+                <select id="filterPayment" onchange="applyFilters()">
+                    <option value="">Todas</option>
+                </select>
+            </label>
+            <button onclick="resetFilters()">Limpar Filtros</button>
+            <button onclick="exportCSV()">Exportar CSV</button>
+        </div>
+        <!-- Resumo em cartões -->
+        <div class="summary-cards">
+            <div class="summary-card income">
+                <span class="card-title">Receitas</span>
+                <span id="totalIncome" class="card-value">0</span>
+            </div>
+            <div class="summary-card expense">
+                <span class="card-title">Despesas</span>
+                <span id="totalExpense" class="card-value">0</span>
+            </div>
+            <div class="summary-card net">
+                <span class="card-title">Saldo</span>
+                <span id="netBalance" class="card-value">0</span>
+            </div>
+        </div>
+        <!-- Gráfico e avisos em cartão -->
+        <div class="card">
+            <canvas id="categoryChartCanvas"></canvas>
+            <div id="budgetWarnings" style="color: red; margin-top: 10px;"></div>
+        </div>
+        <!-- Tabela de transações em cartão -->
+        <div class="card">
+            <div id="transactionsTable"></div>
+        </div>
+    </section>
+
+    <!-- Gerenciamento de Categorias -->
+    <section id="categories">
+        <h2>Gerenciar Categorias</h2>
+        <form id="categoryForm" onsubmit="addCategory(event)">
+            <label>
+                Nome da Categoria:
+                <input type="text" id="categoryName" required>
+            </label>
+            <label>
+                Orçamento mensal (opcional):
+                <input type="number" id="categoryBudget" min="0" step="0.01">
+            </label>
+            <button type="submit">Adicionar Categoria</button>
+        </form>
+        <ul id="categoryList" style="list-style-type: none; padding: 0;"></ul>
+    </section>
+
+    <!-- Seção de importação de extratos bancários -->
+    <section id="import">
+        <h2>Importar Extrato</h2>
+        <p>Selecione um arquivo de extrato em CSV (separado por ponto e vírgula). O arquivo deve conter ao menos as colunas de data, descrição e valor.</p>
+        <input type="file" id="extratoFile" accept=".csv,text/csv" onchange="handleExtratoFile(event)">
+        <!-- Pré-visualização dos lançamentos importados -->
+        <div id="importPreview" style="margin-top: 20px;"></div>
+        <!-- Botão para salvar os lançamentos importados -->
+        <button id="saveImportedBtn" type="button" onclick="saveImported()" style="display:none; margin-top: 10px;">Salvar Importados</button>
+    </section>
+
+    <script>
+    // Armazena dados em localStorage
+    const STORAGE_KEYS = {
+        transactions: 'pf_transactions',
+        fixedCosts: 'pf_fixed_costs'
+    };
+
+    // Chave de armazenamento para categorias
+    const CATEGORY_KEY = 'pf_categories';
+
+    // Chave de armazenamento para formas de pagamento
+    const PAYMENT_KEY = 'pf_payment_methods';
+
+    // Formas de pagamento padrão sugeridas
+    const DEFAULT_PAYMENTS = [
+        'Dinheiro',
+        'Cartão de crédito',
+        'Cartão de débito',
+        'Pix',
+        'Boleto',
+        'Transferência'
+    ];
+
+    // Instância do gráfico de categorias (mantida para destruir antes de recriar)
+    let categoryChart = null;
+
+    // Variáveis de controle de edição
+    // editType: null (novo), 'tx' (editando lançamento), 'fix' (editando custo fixo)
+    // editIndex: índice da movimentação ou custo fixo que está sendo editado
+    let editType = null;
+    let editIndex = null;
+
+    // Categorias padrão sugeridas. Usadas apenas se não houver nenhuma categoria cadastrada
+    const DEFAULT_CATEGORIES = [
+        { name: 'Moradia', budget: null },
+        { name: 'Alimentação', budget: null },
+        { name: 'Transporte', budget: null },
+        { name: 'Lazer', budget: null },
+        { name: 'Saúde', budget: null },
+        { name: 'Educação', budget: null },
+        { name: 'Investimentos', budget: null },
+        { name: 'Outros', budget: null }
+    ];
+
+    /**
+     * Garante que existam algumas categorias padrão no armazenamento se ainda não houver nenhuma.
+     */
+    function ensureDefaultCategories() {
+        let cats = loadCategories();
+        if (!cats) cats = [];
+        let modified = false;
+        DEFAULT_CATEGORIES.forEach(def => {
+            if (!cats.some(c => c.name === def.name)) {
+                cats.push({ name: def.name, budget: def.budget });
+                modified = true;
+            }
+        });
+        if (modified) {
+            saveCategories(cats);
+        }
+    }
+
+    // Carrega categorias do localStorage
+    function loadCategories() {
+        // Suporta versões antigas (array de strings) convertendo para objetos com nome e orçamento
+        const raw = JSON.parse(localStorage.getItem(CATEGORY_KEY) || '[]');
+        return raw.map(cat => {
+            if (typeof cat === 'string') {
+                return { name: cat, budget: null };
+            }
+            // garante que tenha as propriedades name e budget
+            return { name: cat.name || '', budget: cat.budget != null ? cat.budget : null };
+        });
+    }
+
+    // Salva categorias no localStorage
+    function saveCategories(cats) {
+        localStorage.setItem(CATEGORY_KEY, JSON.stringify(cats));
+    }
+
+    // Adiciona uma nova categoria
+    function addCategory(event) {
+        event.preventDefault();
+        const cats = loadCategories();
+        const name = document.getElementById('categoryName').value.trim();
+        // lê o orçamento opcional da categoria
+        const budgetInput = document.getElementById('categoryBudget').value;
+        const budgetVal = parseFloat(budgetInput);
+        const budget = !isNaN(budgetVal) ? budgetVal : null;
+        // verifica se já existe categoria com mesmo nome
+        if (name && !cats.some(c => c.name === name)) {
+            cats.push({ name: name, budget: budget });
+            saveCategories(cats);
+            // limpa campos
+            document.getElementById('categoryName').value = '';
+            document.getElementById('categoryBudget').value = '';
+            renderCategoryList();
+            renderCategoryOptions();
+            alert('Categoria adicionada com sucesso!');
+        } else {
+            alert('Categoria inválida ou já existente.');
+        }
+    }
+
+    // Edita o nome de uma categoria existente
+    function editCategory(idx) {
+        const cats = loadCategories();
+        const current = cats[idx];
+        const newName = prompt('Novo nome para a categoria "' + current.name + '":', current.name);
+        if (newName === null) return;
+        const trimmedName = newName.trim();
+        // Verifica se já existe outra categoria com esse nome (exceto a atual)
+        if (!trimmedName || cats.some((c, i) => i !== idx && c.name === trimmedName)) {
+            alert('Categoria inválida ou já existente.');
+            return;
+        }
+        // Pergunta novo orçamento
+        const budgetStr = prompt('Novo orçamento mensal (deixe em branco para nenhum):', current.budget != null ? current.budget : '');
+        let newBudget = null;
+        if (budgetStr !== null && budgetStr.trim() !== '') {
+            // aceita vírgula ou ponto como separador decimal
+            const normalized = budgetStr.replace(',', '.');
+            const parsed = parseFloat(normalized);
+            if (!isNaN(parsed) && parsed >= 0) {
+                newBudget = parsed;
+            }
+        }
+        const data = loadData();
+        // Atualiza todas as movimentações e custos fixos com o novo nome
+        data.txs.forEach(tx => { if (tx.category === current.name) tx.category = trimmedName; });
+        data.fix.forEach(f => { if (f.category === current.name) f.category = trimmedName; });
+        cats[idx] = { name: trimmedName, budget: newBudget };
+        saveCategories(cats);
+        saveData(data.txs, data.fix);
+        renderCategoryList();
+        renderCategoryOptions();
+        renderDashboard();
+    }
+
+    // Remove uma categoria e atualiza transações e custos fixos
+    function deleteCategory(idx) {
+        const cats = loadCategories();
+        const cat = cats[idx];
+        // confirma exclusão exibindo o nome
+        if (!confirm('Deseja realmente excluir a categoria "' + cat.name + '"?')) return;
+        cats.splice(idx, 1);
+        const data = loadData();
+        // Remove a categoria das movimentações e custos fixos
+        data.txs.forEach(tx => { if (tx.category === cat.name) tx.category = ''; });
+        data.fix.forEach(f => { if (f.category === cat.name) f.category = ''; });
+        saveCategories(cats);
+        saveData(data.txs, data.fix);
+        renderCategoryList();
+        renderCategoryOptions();
+        renderDashboard();
+    }
+
+    // Renderiza lista de categorias na seção de categorias
+    function renderCategoryList() {
+        const cats = loadCategories();
+        const list = document.getElementById('categoryList');
+        if (!list) return;
+        list.innerHTML = '';
+        cats.forEach((cat, idx) => {
+            const li = document.createElement('li');
+            // texto da categoria com orçamento
+            const span = document.createElement('span');
+            let label = cat.name;
+            if (cat.budget != null) {
+                label += ' (Orçamento: ' + cat.budget.toLocaleString('pt-BR', {style:'currency', currency:'BRL'}) + ')';
+            }
+            span.textContent = label;
+            li.appendChild(span);
+            // botão editar
+            const editBtn = document.createElement('button');
+            editBtn.type = 'button';
+            editBtn.textContent = 'Editar';
+            editBtn.style.marginLeft = '8px';
+            editBtn.onclick = function() { editCategory(idx); };
+            li.appendChild(editBtn);
+            // botão excluir
+            const delBtn = document.createElement('button');
+            delBtn.type = 'button';
+            delBtn.textContent = 'Excluir';
+            delBtn.style.marginLeft = '4px';
+            delBtn.onclick = function() { deleteCategory(idx); };
+            li.appendChild(delBtn);
+            list.appendChild(li);
+        });
+    }
+
+    // Atualiza as opções de categoria nos formulários de lançamento e fixos
+    function renderCategoryOptions() {
+        const cats = loadCategories();
+        const selects = document.querySelectorAll('.category-select');
+        selects.forEach(sel => {
+            // Limpa opções existentes
+            sel.innerHTML = '';
+            cats.forEach(cat => {
+                const option = document.createElement('option');
+                option.value = cat.name;
+                option.textContent = cat.name;
+                sel.appendChild(option);
+            });
+            // Caso não existam categorias, adiciona uma opção vazia
+            if (cats.length === 0) {
+                const option = document.createElement('option');
+                option.value = '';
+                option.textContent = '— sem categorias cadastradas —';
+                sel.appendChild(option);
+            }
+        });
+        // Atualiza o seletor de filtro de categoria, se existir
+        const filterSel = document.getElementById('filterCategory');
+        if (filterSel) {
+            const currentVal = filterSel.value;
+            filterSel.innerHTML = '';
+            const allOption = document.createElement('option');
+            allOption.value = '';
+            allOption.textContent = 'Todas';
+            filterSel.appendChild(allOption);
+            cats.forEach(cat => {
+                const opt = document.createElement('option');
+                opt.value = cat.name;
+                opt.textContent = cat.name;
+                filterSel.appendChild(opt);
+            });
+            filterSel.value = currentVal;
+        }
+        // encerra a função de renderização de categorias
+    }
+
+    /* ================================================================
+       Formas de pagamento
+       ---------------------------------------------------------------
+       Permite cadastrar, editar e excluir formas de pagamento.
+       As formas são armazenadas no localStorage sob a chave PAYMENT_KEY.
+    */
+
+    // Carrega formas de pagamento do armazenamento
+    function loadPayments() {
+        const raw = JSON.parse(localStorage.getItem(PAYMENT_KEY) || 'null');
+        if (raw && Array.isArray(raw)) {
+            return raw;
+        }
+        return [];
+    }
+
+    // Salva lista de formas de pagamento no armazenamento
+    function savePayments(list) {
+        localStorage.setItem(PAYMENT_KEY, JSON.stringify(list));
+    }
+
+    // Garante que existam formas de pagamento padrão se nenhuma estiver cadastrada
+    function ensureDefaultPayments() {
+        let pays = loadPayments();
+        if (!pays || pays.length === 0) {
+            pays = DEFAULT_PAYMENTS.slice();
+            savePayments(pays);
+        }
+    }
+
+    // Renderiza lista de formas de pagamento na seção de gerenciamento
+    function renderPaymentList() {
+        // Garante que existam formas de pagamento padrão antes de renderizar
+        ensureDefaultPayments();
+        const pays = loadPayments();
+        const list = document.getElementById('paymentList');
+        if (!list) return;
+        list.innerHTML = '';
+        pays.forEach((pay, idx) => {
+            const li = document.createElement('li');
+            const span = document.createElement('span');
+            span.textContent = pay;
+            li.appendChild(span);
+            // botão editar
+            const editBtn = document.createElement('button');
+            editBtn.type = 'button';
+            editBtn.textContent = 'Editar';
+            editBtn.style.marginLeft = '8px';
+            editBtn.onclick = function() { editPaymentMethod(idx); };
+            li.appendChild(editBtn);
+            // botão excluir
+            const delBtn = document.createElement('button');
+            delBtn.type = 'button';
+            delBtn.textContent = 'Excluir';
+            delBtn.style.marginLeft = '4px';
+            delBtn.onclick = function() { deletePaymentMethod(idx); };
+            li.appendChild(delBtn);
+            list.appendChild(li);
+        });
+    }
+
+    // Atualiza opções de formas de pagamento nos formulários e importação
+    function renderPaymentOptions() {
+        // Garante que existam formas de pagamento padrão antes de atualizar opções
+        ensureDefaultPayments();
+        const pays = loadPayments();
+        // Seletores em formulários (classe payment-select)
+        const selects = document.querySelectorAll('.payment-select');
+        selects.forEach(sel => {
+            // manter valor atual se existir
+            const currentVal = sel.value;
+            sel.innerHTML = '';
+            pays.forEach(pay => {
+                const opt = document.createElement('option');
+                opt.value = pay;
+                opt.textContent = pay;
+                sel.appendChild(opt);
+            });
+            // se não houver nenhuma forma cadastrada, deixa opção vazia
+            if (pays.length === 0) {
+                const opt = document.createElement('option');
+                opt.value = '';
+                opt.textContent = '— sem formas de pagamento —';
+                sel.appendChild(opt);
+            }
+            // restaura valor anterior se ainda existir na lista
+            if (currentVal && pays.includes(currentVal)) {
+                sel.value = currentVal;
+            }
+        });
+        // Atualiza o seletor de filtro de forma de pagamento, se existir
+        const filterSel = document.getElementById('filterPayment');
+        if (filterSel) {
+            const prev = filterSel.value;
+            filterSel.innerHTML = '';
+            const allOpt = document.createElement('option');
+            allOpt.value = '';
+            allOpt.textContent = 'Todas';
+            filterSel.appendChild(allOpt);
+            pays.forEach(pay => {
+                const opt = document.createElement('option');
+                opt.value = pay;
+                opt.textContent = pay;
+                filterSel.appendChild(opt);
+            });
+            filterSel.value = prev && pays.includes(prev) ? prev : '';
+        }
+    }
+
+    // Adiciona nova forma de pagamento
+    function addPaymentMethod(event) {
+        event.preventDefault();
+        const name = document.getElementById('paymentName').value.trim();
+        if (!name) {
+            alert('Nome inválido');
+            return;
+        }
+        const pays = loadPayments();
+        if (pays.includes(name)) {
+            alert('Já existe uma forma de pagamento com esse nome.');
+            return;
+        }
+        pays.push(name);
+        savePayments(pays);
+        document.getElementById('paymentName').value = '';
+        renderPaymentList();
+        renderPaymentOptions();
+    }
+
+    // Edita uma forma de pagamento
+    function editPaymentMethod(idx) {
+        const pays = loadPayments();
+        const current = pays[idx];
+        const newName = prompt('Novo nome para a forma de pagamento "' + current + '":', current);
+        if (newName === null) return;
+        const trimmed = newName.trim();
+        if (!trimmed || pays.some((p, i) => i !== idx && p === trimmed)) {
+            alert('Nome inválido ou já existente.');
+            return;
+        }
+        // Atualizar formas usadas nas transações e custos
+        const data = loadData();
+        data.txs.forEach(tx => {
+            if (tx.payment === current) tx.payment = trimmed;
+        });
+        data.fix.forEach(f => {
+            if (f.payment === current) f.payment = trimmed;
+        });
+        pays[idx] = trimmed;
+        savePayments(pays);
+        saveData(data.txs, data.fix);
+        renderPaymentList();
+        renderPaymentOptions();
+        renderDashboard();
+    }
+
+    // Exclui uma forma de pagamento
+    function deletePaymentMethod(idx) {
+        const pays = loadPayments();
+        const pay = pays[idx];
+        if (!confirm('Deseja realmente excluir a forma de pagamento "' + pay + '"?')) return;
+        pays.splice(idx, 1);
+        // Remove dos lançamentos e custos fixos
+        const data = loadData();
+        data.txs.forEach(tx => { if (tx.payment === pay) tx.payment = ''; });
+        data.fix.forEach(f => { if (f.payment === pay) f.payment = ''; });
+        savePayments(pays);
+        saveData(data.txs, data.fix);
+        renderPaymentList();
+        renderPaymentOptions();
+        renderDashboard();
+    }
+
+    function loadData() {
+        const txs = JSON.parse(localStorage.getItem(STORAGE_KEYS.transactions) || '[]');
+        const fix = JSON.parse(localStorage.getItem(STORAGE_KEYS.fixedCosts) || '[]');
+        return { txs, fix };
+    }
+
+    function saveData(txs, fix) {
+        localStorage.setItem(STORAGE_KEYS.transactions, JSON.stringify(txs));
+        localStorage.setItem(STORAGE_KEYS.fixedCosts, JSON.stringify(fix));
+    }
+
+    function showSection(id) {
+        document.querySelectorAll('section').forEach(sec => sec.classList.remove('active'));
+        document.getElementById(id).classList.add('active');
+        if (id === 'dashboard') {
+            renderDashboard();
+        }
+        if (id === 'categories') {
+            renderCategoryList();
+            renderCategoryOptions();
+        }
+        // Quando for aberta a seção de importação, atualiza a pré-visualização para refletir possíveis alterações de categorias
+        if (id === 'import') {
+            renderImportPreview();
+        }
+        if (id === 'paymentMethods') {
+            renderPaymentList();
+            renderPaymentOptions();
+        }
+    }
+
+    function addTransaction(event) {
+        event.preventDefault();
+        const txs = JSON.parse(localStorage.getItem(STORAGE_KEYS.transactions) || '[]');
+        const newTx = {
+            date: document.getElementById('transDate').value,
+            category: document.getElementById('transCategory').value.trim(),
+            description: document.getElementById('transDescription').value.trim(),
+            type: document.getElementById('transType').value,
+            value: parseFloat(document.getElementById('transValue').value),
+            payment: document.getElementById('transPayment').value.trim(),
+            notes: document.getElementById('transNotes').value.trim()
+        };
+        if (editType === 'tx' && editIndex !== null) {
+            // Atualiza a transação existente mantendo a origem
+            const existing = txs[editIndex];
+            if (existing) {
+                existing.date = newTx.date;
+                existing.category = newTx.category;
+                existing.description = newTx.description;
+                existing.type = newTx.type;
+                existing.value = newTx.value;
+                existing.payment = newTx.payment;
+                existing.notes = newTx.notes;
+                // não altera existing.source (pode ser 'tx' ou outro)
+            }
+            alert('Lançamento atualizado com sucesso!');
+        } else {
+            // Define origem
+            newTx.source = 'tx';
+            txs.push(newTx);
+            alert('Lançamento salvo com sucesso!');
+        }
+        localStorage.setItem(STORAGE_KEYS.transactions, JSON.stringify(txs));
+        // Limpa formulário e reseta indicadores de edição
+        document.getElementById('transactionForm').reset();
+        editType = null;
+        editIndex = null;
+        renderDashboard();
+    }
+
+    function addFixedCost(event) {
+        event.preventDefault();
+        const fixs = JSON.parse(localStorage.getItem(STORAGE_KEYS.fixedCosts) || '[]');
+        const newFix = {
+            name: document.getElementById('fixName').value.trim(),
+            category: document.getElementById('fixCategory').value.trim(),
+            value: parseFloat(document.getElementById('fixValue').value),
+            day: parseInt(document.getElementById('fixDay').value, 10),
+            payment: document.getElementById('fixPayment').value.trim(),
+            notes: document.getElementById('fixNotes').value.trim(),
+            active: document.getElementById('fixActive').checked
+        };
+        if (editType === 'fix' && editIndex !== null) {
+            const existing = fixs[editIndex];
+            if (existing) {
+                existing.name = newFix.name;
+                existing.category = newFix.category;
+                existing.value = newFix.value;
+                existing.day = newFix.day;
+                existing.payment = newFix.payment;
+                existing.notes = newFix.notes;
+                existing.active = newFix.active;
+                // mantém startDate existente
+            }
+            alert('Custo fixo atualizado com sucesso!');
+        } else {
+            // define data de inserção
+            newFix.startDate = new Date().toISOString().slice(0,10);
+            fixs.push(newFix);
+            alert('Custo fixo salvo com sucesso!');
+        }
+        localStorage.setItem(STORAGE_KEYS.fixedCosts, JSON.stringify(fixs));
+        document.getElementById('fixedForm').reset();
+        editType = null;
+        editIndex = null;
+        renderDashboard();
+    }
+
+    function applyFilters() {
+        renderDashboard();
+    }
+
+    function resetFilters() {
+        document.getElementById('startDate').value = '';
+        document.getElementById('endDate').value = '';
+        const paySel = document.getElementById('filterPayment');
+        if (paySel) paySel.value = '';
+        renderDashboard();
+    }
+
+    // Gera transações a partir de custos fixos dentro de um período
+    function generateFixedTransactions(fixedCosts, startDate, endDate) {
+        const results = [];
+        fixedCosts.forEach((fix, fi) => {
+            if (!fix.active) return;
+            // determina a data de início válida para este custo fixo
+            const fixStart = fix.startDate ? fix.startDate : null;
+            const start = new Date(startDate);
+            const end = new Date(endDate);
+            // normalize início e fim para o primeiro dia do mês
+            start.setDate(1);
+            end.setDate(1);
+            const current = new Date(start);
+            while (current <= end) {
+                const year = current.getFullYear();
+                const month = current.getMonth();
+                const lastDay = new Date(year, month + 1, 0).getDate();
+                const day = Math.min(fix.day, lastDay);
+                const dateStr = new Date(year, month, day).toISOString().slice(0,10);
+                // ignora meses anteriores à data de inserção, se existir
+                if (fixStart && dateStr < fixStart) {
+                    current.setMonth(current.getMonth() + 1);
+                    continue;
+                }
+                if (dateStr >= startDate && dateStr <= endDate) {
+                    results.push({
+                        date: dateStr,
+                        category: fix.category,
+                        description: fix.name,
+                        type: 'Despesa',
+                        value: fix.value,
+                        payment: fix.payment,
+                        notes: (fix.notes || '') + ' (fixo)',
+                        source: 'fix',
+                        fixIndex: fi
+                    });
+                }
+                current.setMonth(current.getMonth() + 1);
+            }
+        });
+        return results;
+    }
+
+    function renderDashboard() {
+        // obtém dados e filtros
+        const { txs, fix } = loadData();
+        let start = document.getElementById('startDate').value;
+        let end = document.getElementById('endDate').value;
+        const today = new Date();
+        const currentYear = today.getFullYear();
+        if (!start) start = `${currentYear}-01-01`;
+        if (!end) end = `${currentYear}-12-31`;
+
+        // Atualiza opções do seletor de forma de pagamento com base nas formas cadastradas
+        const paymentSelect = document.getElementById('filterPayment');
+        if (paymentSelect) {
+            const currentPay = paymentSelect.value;
+            // limpa opções existentes
+            paymentSelect.innerHTML = '';
+            const optAll = document.createElement('option');
+            optAll.value = '';
+            optAll.textContent = 'Todas';
+            paymentSelect.appendChild(optAll);
+            const pays = loadPayments();
+            pays.forEach(p => {
+                const opt = document.createElement('option');
+                opt.value = p;
+                opt.textContent = p;
+                paymentSelect.appendChild(opt);
+            });
+            // restaura valor atual, se existir
+            paymentSelect.value = currentPay && pays.includes(currentPay) ? currentPay : '';
+        }
+        // filtros adicionais
+        const catFilterEl = document.getElementById('filterCategory');
+        const descFilterEl = document.getElementById('filterDescription');
+        const payFilterEl = document.getElementById('filterPayment');
+        const catFilter = catFilterEl ? catFilterEl.value : '';
+        const descFilter = descFilterEl ? descFilterEl.value.toLowerCase() : '';
+        const payFilter = payFilterEl ? payFilterEl.value : '';
+        // Filtra lançamentos com índice
+        const filteredTxRows = [];
+        txs.forEach((tx, idx) => {
+            if (tx.date >= start && tx.date <= end) {
+                if (catFilter && tx.category !== catFilter) return;
+                if (descFilter && !tx.description.toLowerCase().includes(descFilter)) return;
+                if (payFilter && (tx.payment || '') !== payFilter) return;
+                filteredTxRows.push(Object.assign({}, tx, { source: 'tx', txIndex: idx }));
+            }
+        });
+        // Filtra transações geradas a partir de custos fixos
+        const fixedTxs = generateFixedTransactions(fix, start, end).filter(tx => {
+            if (catFilter && tx.category !== catFilter) return false;
+            if (descFilter && !tx.description.toLowerCase().includes(descFilter)) return false;
+            if (payFilter && (tx.payment || '') !== payFilter) return false;
+            return true;
+        });
+        // Combina e ordena por data
+        const allRows = filteredTxRows.concat(fixedTxs);
+        allRows.sort((a, b) => a.date.localeCompare(b.date));
+        // Calcula totais e somas por categoria
+        let totalIncome = 0, totalExpense = 0;
+        const categoryTotals = {};
+        allRows.forEach(row => {
+            if (row.type === 'Receita') {
+                totalIncome += row.value;
+            } else {
+                totalExpense += row.value;
+                if (!categoryTotals[row.category]) categoryTotals[row.category] = 0;
+                categoryTotals[row.category] += row.value;
+            }
+        });
+        const net = totalIncome - totalExpense;
+        document.getElementById('totalIncome').textContent = totalIncome.toLocaleString('pt-BR', {style:'currency', currency:'BRL'});
+        document.getElementById('totalExpense').textContent = totalExpense.toLocaleString('pt-BR', {style:'currency', currency:'BRL'});
+        const netEl = document.getElementById('netBalance');
+        netEl.textContent = net.toLocaleString('pt-BR', {style:'currency', currency:'BRL'});
+        // Atualiza classes de saldo sem remover outras classes
+        netEl.classList.remove('positive', 'negative');
+        netEl.classList.add(net >= 0 ? 'positive' : 'negative');
+        // Monta gráfico de categorias
+        const labels = Object.keys(categoryTotals);
+        const values = labels.map(cat => categoryTotals[cat]);
+        // Obtém orçamentos das categorias, alinhando à ordem das labels
+        const cats = loadCategories();
+        const budgetsArr = labels.map(cat => {
+            const obj = cats.find(c => c.name === cat);
+            return obj && obj.budget != null ? obj.budget : 0;
+        });
+        // Define cores dos bares: vermelho para categorias que ultrapassaram o orçamento, cor gerada para o restante
+        const barColors = labels.map((cat, i) => {
+            const spent = values[i];
+            const budget = budgetsArr[i];
+            if (budget && spent > budget) {
+                return 'rgba(255, 99, 132, 0.8)'; // vermelho para excedido
+            }
+            return stringToColor(cat);
+        });
+        if (categoryChart) {
+            try { categoryChart.destroy(); } catch (e) {}
+        }
+        const canvas = document.getElementById('categoryChartCanvas');
+        if (canvas) {
+            const ctx = canvas.getContext('2d');
+            categoryChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'Despesas',
+                            data: values,
+                            backgroundColor: barColors,
+                        },
+                        {
+                            label: 'Orçamento',
+                            data: budgetsArr,
+                            backgroundColor: labels.map(() => 'rgba(0, 0, 0, 0.1)'),
+                            borderColor: labels.map(() => '#888'),
+                            borderWidth: 1,
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+        }
+        // Gera avisos se alguma categoria extrapolou o orçamento
+        const warningsDiv = document.getElementById('budgetWarnings');
+        if (warningsDiv) {
+            const overspent = labels.filter((cat, i) => budgetsArr[i] && values[i] > budgetsArr[i]);
+            if (overspent.length > 0) {
+                warningsDiv.textContent = 'Orçamento excedido nas categorias: ' + overspent.join(', ');
+            } else {
+                warningsDiv.textContent = '';
+            }
+        }
+        // Monta tabela de movimentos
+        const tableDiv = document.getElementById('transactionsTable');
+        tableDiv.innerHTML = '';
+        if (allRows.length === 0) {
+            tableDiv.textContent = 'Nenhuma movimentação no período selecionado.';
+            return;
+        }
+        const table = document.createElement('table');
+        const thead = document.createElement('thead');
+        thead.innerHTML = '<tr><th>Data</th><th>Categoria</th><th>Descrição</th><th>Tipo</th><th>Valor</th><th>Forma</th><th>Observações</th><th>Ações</th></tr>';
+        table.appendChild(thead);
+        const tbody = document.createElement('tbody');
+        allRows.forEach(row => {
+            const tr = document.createElement('tr');
+            const valString = row.value.toLocaleString('pt-BR', {style:'currency', currency:'BRL'});
+            tr.innerHTML = `<td>${row.date}</td><td>${row.category}</td><td>${row.description}</td><td>${row.type}</td><td>${valString}</td><td>${row.payment}</td><td>${row.notes}</td>`;
+            const actionsTd = document.createElement('td');
+            // Botão editar
+            const editBtn = document.createElement('button');
+            editBtn.type = 'button';
+            editBtn.textContent = 'Editar';
+            if (row.source === 'tx') {
+                editBtn.onclick = function() { startEditRow('tx', row.txIndex); };
+            } else if (row.source === 'fix') {
+                editBtn.onclick = function() { startEditRow('fix', row.fixIndex); };
+            }
+            actionsTd.appendChild(editBtn);
+            // Botão excluir
+            const delBtn = document.createElement('button');
+            delBtn.type = 'button';
+            delBtn.textContent = 'Excluir';
+            if (row.source === 'tx') {
+                delBtn.onclick = function() { deleteRow('tx', row.txIndex); };
+            } else if (row.source === 'fix') {
+                delBtn.onclick = function() { deleteRow('fix', row.fixIndex); };
+            }
+            actionsTd.appendChild(delBtn);
+            tr.appendChild(actionsTd);
+            tbody.appendChild(tr);
+        });
+        table.appendChild(tbody);
+        tableDiv.appendChild(table);
+    }
+
+    function stringToColor(str) {
+        let hash = 0;
+        for (let i = 0; i < str.length; i++) {
+            hash = str.charCodeAt(i) + ((hash << 5) - hash);
+        }
+        let color = '#';
+        for (let i = 0; i < 3; i++) {
+            const value = (hash >> (i * 8)) & 0xFF;
+            color += ('00' + value.toString(16)).substr(-2);
+        }
+        return color;
+    }
+
+    /**
+     * Remove uma movimentação ou custo fixo
+     * @param {string} type - 'tx' para transação, 'fix' para custo fixo
+     * @param {number} idx - índice no array correspondente
+     */
+    function deleteRow(type, idx) {
+        if (!confirm('Deseja realmente excluir este item?')) return;
+        const data = loadData();
+        if (type === 'tx') {
+            if (idx >= 0 && idx < data.txs.length) {
+                data.txs.splice(idx, 1);
+            }
+        } else if (type === 'fix') {
+            if (idx >= 0 && idx < data.fix.length) {
+                data.fix.splice(idx, 1);
+            }
+        }
+        saveData(data.txs, data.fix);
+        renderDashboard();
+    }
+
+    /**
+     * Inicia a edição de uma movimentação ou custo fixo.
+     * Preenche o formulário correspondente e alterna para a seção adequada.
+     * @param {string} type - 'tx' para transação, 'fix' para custo fixo
+     * @param {number} idx - índice da movimentação ou custo fixo
+     */
+    function startEditRow(type, idx) {
+        const data = loadData();
+        if (type === 'tx') {
+            const tx = data.txs[idx];
+            if (!tx) return;
+            editType = 'tx';
+            editIndex = idx;
+            document.getElementById('transDate').value = tx.date;
+            document.getElementById('transCategory').value = tx.category || '';
+            document.getElementById('transDescription').value = tx.description || '';
+            document.getElementById('transType').value = tx.type || '';
+            document.getElementById('transValue').value = tx.value;
+            document.getElementById('transPayment').value = tx.payment || '';
+            document.getElementById('transNotes').value = tx.notes || '';
+            showSection('transaction');
+        } else if (type === 'fix') {
+            const f = data.fix[idx];
+            if (!f) return;
+            editType = 'fix';
+            editIndex = idx;
+            document.getElementById('fixName').value = f.name || '';
+            document.getElementById('fixCategory').value = f.category || '';
+            document.getElementById('fixValue').value = f.value;
+            document.getElementById('fixDay').value = f.day;
+            document.getElementById('fixPayment').value = f.payment || '';
+            document.getElementById('fixNotes').value = f.notes || '';
+            document.getElementById('fixActive').checked = !!f.active;
+            showSection('fixed');
+        }
+    }
+
+    function exportCSV() {
+        const { txs, fix } = loadData();
+        let start = document.getElementById('startDate').value;
+        let end = document.getElementById('endDate').value;
+        const today = new Date();
+        const currentYear = today.getFullYear();
+        if (!start) start = `${currentYear}-01-01`;
+        if (!end) end = `${currentYear}-12-31`;
+        const filteredTxs = txs.filter(tx => tx.date >= start && tx.date <= end);
+        const fixedTxs = generateFixedTransactions(fix, start, end);
+        const allTxs = filteredTxs.concat(fixedTxs).sort((a,b) => a.date.localeCompare(b.date));
+        let csv = 'Data,Categoria,Descrição,Tipo,Valor,Forma,Observações\n';
+        allTxs.forEach(tx => {
+            const row = [tx.date, tx.category, tx.description, tx.type, tx.value.toString().replace('.',','), tx.payment, tx.notes];
+            csv += row.map(v => '"' + v.replace(/"/g, '""') + '"').join(',') + '\n';
+        });
+        const blob = new Blob([csv], {type: 'text/csv;charset=utf-8;'});
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.setAttribute('href', url);
+        link.setAttribute('download', 'movimentacoes.csv');
+        link.style.display = 'none';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+
+    window.onload = function() {
+        // Se não houver categorias cadastradas, cria algumas sugestões padrão
+        ensureDefaultCategories();
+        // Garante formas de pagamento padrão
+        ensureDefaultPayments();
+        // Renderiza listas e opções
+        renderCategoryList();
+        renderCategoryOptions();
+        renderPaymentList();
+        renderPaymentOptions();
+        renderDashboard();
+    };
+
+    // -----------------------
+    // Funções para importação de extratos (CSV)
+    // -----------------------
+
+    // Armazena temporariamente as linhas importadas do extrato
+    let importRows = [];
+
+    /**
+     * Divide uma linha CSV em colunas, respeitando aspas e delimitador ponto e vírgula.
+     * @param {string} line A linha completa do CSV
+     * @returns {string[]} Array de valores de coluna
+     */
+    function parseCSVLine(line) {
+        const values = [];
+        let current = '';
+        let inQuotes = false;
+        for (let i = 0; i < line.length; i++) {
+            const ch = line[i];
+            if (ch === '"') {
+                inQuotes = !inQuotes;
+            } else if (ch === ';' && !inQuotes) {
+                values.push(current);
+                current = '';
+            } else {
+                current += ch;
+            }
+        }
+        values.push(current);
+        return values.map(v => v.replace(/^"|"$/g, '').trim());
+    }
+
+    /**
+     * Normaliza datas em formatos DD/MM/AAAA ou AAAA-MM-DD para AAAA-MM-DD.
+     * @param {string} dateStr Data original do extrato
+     * @returns {string} Data no formato ISO AAAA-MM-DD ou string original se inválido
+     */
+    function normalizeDate(dateStr) {
+        if (!dateStr) return '';
+        // se contiver barra assume formato dd/mm/aaaa
+        if (dateStr.includes('/')) {
+            const parts = dateStr.split(/[\/]/);
+            if (parts.length === 3) {
+                const [d, m, y] = parts;
+                if (y.length === 4) {
+                    const dd = d.padStart(2, '0');
+                    const mm = m.padStart(2, '0');
+                    return `${y}-${mm}-${dd}`;
+                }
+            }
+        }
+        // se contiver traço assume AAAA-MM-DD ou dd-mm-aaaa
+        if (dateStr.includes('-')) {
+            const parts = dateStr.split('-');
+            if (parts.length === 3) {
+                if (parts[0].length === 4) {
+                    return dateStr;
+                } else {
+                    // dd-mm-aaaa
+                    const [d, m, y] = parts;
+                    return `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
+                }
+            }
+        }
+        return dateStr;
+    }
+
+    /**
+     * Converte o texto de um extrato CSV em um array de transações.
+     * O CSV deve usar ponto e vírgula como delimitador; a primeira linha deve
+     * conter os nomes de coluna. As colunas "data", "descricao" e "valor" (qualquer
+     * combinação de maiúsculas/minúsculas) são obrigatórias.
+     * Valores negativos indicam despesas.
+     * @param {string} text Conteúdo do arquivo CSV
+     * @returns {Array<{date:string, description:string, value:number, type:string}>}
+     */
+    function parseExtratoCSV(text) {
+        const rows = [];
+        const lines = text.split(/\r?\n/).filter(l => l.trim() !== '');
+        if (lines.length < 2) return rows;
+        const header = parseCSVLine(lines[0]).map(h => h.toLowerCase());
+        const idxDate = header.findIndex(h => h.includes('data'));
+        const idxDesc = header.findIndex(h => h.includes('descr'));
+        const idxVal = header.findIndex(h => h.includes('valor'));
+        if (idxDate < 0 || idxDesc < 0 || idxVal < 0) {
+            alert('Arquivo de extrato inválido: colunas necessárias não encontradas.');
+            return rows;
+        }
+        for (let i = 1; i < lines.length; i++) {
+            const cols = parseCSVLine(lines[i]);
+            if (cols.length <= Math.max(idxDate, idxDesc, idxVal)) continue;
+            const rawDate = cols[idxDate];
+            const date = normalizeDate(rawDate);
+            const description = cols[idxDesc];
+            // Remove pontos como separadores de milhar e converte vírgula para ponto
+            let valorStr = cols[idxVal].replace(/\./g, '').replace(',', '.');
+            // remove aspas adicionais
+            valorStr = valorStr.replace(/"/g, '');
+            let valorNum = parseFloat(valorStr);
+            if (isNaN(valorNum)) valorNum = 0;
+            const type = valorNum >= 0 ? 'Receita' : 'Despesa';
+            rows.push({
+                date: date,
+                description: description,
+                value: Math.abs(valorNum),
+                type: type,
+                category: '',
+                payment: '',
+                notes: ''
+            });
+        }
+        return rows;
+    }
+
+    /**
+     * Manipula o upload do arquivo de extrato.
+     */
+    function handleExtratoFile(event) {
+        const file = event.target.files && event.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const text = e.target.result;
+            importRows = parseExtratoCSV(text);
+            renderImportPreview();
+        };
+        reader.readAsText(file, 'UTF-8');
+    }
+
+    /**
+     * Renderiza a pré-visualização das movimentações importadas e permite seleção de categoria.
+     */
+    function renderImportPreview() {
+        const previewDiv = document.getElementById('importPreview');
+        const saveBtn = document.getElementById('saveImportedBtn');
+        previewDiv.innerHTML = '';
+        if (!importRows || importRows.length === 0) {
+            saveBtn.style.display = 'none';
+            return;
+        }
+        // Exibe botão de salvar
+        saveBtn.style.display = 'inline-block';
+        // Cria tabela
+        const table = document.createElement('table');
+        const thead = document.createElement('thead');
+        // adiciona coluna para forma de pagamento entre valor e categoria
+        thead.innerHTML = '<tr><th>Data</th><th>Descrição</th><th>Tipo</th><th>Valor</th><th>Forma de Pagamento</th><th>Categoria</th><th>Excluir</th></tr>';
+        table.appendChild(thead);
+        const tbody = document.createElement('tbody');
+        // Carrega categorias e formas de pagamento atuais
+        const cats = loadCategories();
+        const pays = loadPayments();
+        importRows.forEach((row, idx) => {
+            const tr = document.createElement('tr');
+            // Data
+            const tdDate = document.createElement('td');
+            tdDate.textContent = row.date;
+            tr.appendChild(tdDate);
+            // Descrição
+            const tdDesc = document.createElement('td');
+            tdDesc.textContent = row.description;
+            tr.appendChild(tdDesc);
+            // Tipo
+            const tdType = document.createElement('td');
+            tdType.textContent = row.type;
+            tr.appendChild(tdType);
+            // Valor
+            const tdVal = document.createElement('td');
+            tdVal.textContent = row.value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+            tr.appendChild(tdVal);
+            // Forma de pagamento select
+            const tdPay = document.createElement('td');
+            const paySel = document.createElement('select');
+            paySel.dataset.payidx = idx;
+            // opções de pagamento
+            const blankPay = document.createElement('option');
+            blankPay.value = '';
+            blankPay.textContent = '— selecionar —';
+            paySel.appendChild(blankPay);
+            pays.forEach(p => {
+                const opt = document.createElement('option');
+                opt.value = p;
+                opt.textContent = p;
+                paySel.appendChild(opt);
+            });
+            tdPay.appendChild(paySel);
+            tr.appendChild(tdPay);
+            // Categoria select
+            const tdCat = document.createElement('td');
+            const sel = document.createElement('select');
+            sel.dataset.catidx = idx;
+            const blankOption = document.createElement('option');
+            blankOption.value = '';
+            blankOption.textContent = '— selecionar —';
+            sel.appendChild(blankOption);
+            cats.forEach(cat => {
+                const opt = document.createElement('option');
+                opt.value = cat.name;
+                opt.textContent = cat.name;
+                sel.appendChild(opt);
+            });
+            tdCat.appendChild(sel);
+            tr.appendChild(tdCat);
+            // botão excluir
+            const tdDel = document.createElement('td');
+            const delBtn = document.createElement('button');
+            delBtn.type = 'button';
+            delBtn.textContent = 'Remover';
+            delBtn.onclick = function() {
+                importRows.splice(idx, 1);
+                renderImportPreview();
+            };
+            tdDel.appendChild(delBtn);
+            tr.appendChild(tdDel);
+            tbody.appendChild(tr);
+        });
+        table.appendChild(tbody);
+        previewDiv.appendChild(table);
+    }
+
+    /**
+     * Salva as movimentações importadas no armazenamento local, evitando duplicidades.
+     */
+    function saveImported() {
+        // Atualiza categoria selecionada para cada linha
+        const previewDiv = document.getElementById('importPreview');
+        if (!importRows || importRows.length === 0) return;
+        // Atualiza categorias e formas de pagamento selecionadas
+        const catSelects = previewDiv.querySelectorAll('select[data-catidx]');
+        catSelects.forEach(sel => {
+            const index = parseInt(sel.dataset.catidx, 10);
+            if (importRows[index]) {
+                importRows[index].category = sel.value || '';
+            }
+        });
+        const paySelects = previewDiv.querySelectorAll('select[data-payidx]');
+        paySelects.forEach(sel => {
+            const index = parseInt(sel.dataset.payidx, 10);
+            if (importRows[index]) {
+                importRows[index].payment = sel.value || '';
+            }
+        });
+        // Carrega dados atuais
+        const data = loadData();
+        const existingTxs = data.txs;
+        let added = 0;
+        importRows.forEach(row => {
+            // verifica duplicidade: mesmo date, description e valor
+            const duplicate = existingTxs.some(tx => tx.date === row.date && tx.description === row.description && tx.value === row.value);
+            if (!duplicate) {
+                existingTxs.push({
+                    date: row.date,
+                    category: row.category || '',
+                    description: row.description,
+                    type: row.type,
+                    value: row.value,
+                    payment: row.payment || '',
+                    notes: row.notes || '',
+                    source: 'tx'
+                });
+                added++;
+            }
+        });
+        // Salva dados
+        saveData(existingTxs, data.fix);
+        // Limpa importação
+        importRows = [];
+        document.getElementById('extratoFile').value = '';
+        document.getElementById('importPreview').innerHTML = '';
+        document.getElementById('saveImportedBtn').style.display = 'none';
+        alert('Importação concluída! ' + added + ' lançamentos adicionados.');
+        // Atualiza dashboard
+        renderDashboard();
+    }
+
+    /**
+     * Exporta todos os dados (categorias, formas de pagamento, lançamentos e custos fixos)
+     * para um arquivo JSON. O arquivo gerado pode ser compartilhado para sincronizar
+     * dados entre dispositivos.
+     */
+    function exportData() {
+        const current = loadData();
+        const data = {
+            categories: loadCategories(),
+            payments: loadPayments(),
+            transactions: current.txs,
+            fixedCosts: current.fix
+        };
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'dados_financeiro.json';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    }
+
+    /**
+     * Lê um arquivo JSON selecionado pelo usuário e importa os dados presentes,
+     * substituindo as informações atuais após confirmação. Os dados precisam
+     * conter as propriedades categories, payments, transactions e fixedCosts.
+     */
+    function handleImportData() {
+        const input = document.getElementById('importDataFile');
+        if (!input || !input.files || input.files.length === 0) {
+            alert('Selecione um arquivo JSON válido.');
+            return;
+        }
+        const file = input.files[0];
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            try {
+                const imported = JSON.parse(e.target.result);
+                if (!imported || typeof imported !== 'object') {
+                    throw new Error('Formato inválido');
+                }
+                if (!imported.categories || !imported.payments || !imported.transactions || !imported.fixedCosts) {
+                    throw new Error('Arquivo JSON incompleto.');
+                }
+                if (!confirm('Importar os dados do arquivo e substituir os dados atuais?')) return;
+                // Substitui dados locais
+                saveCategories(imported.categories);
+                savePayments(imported.payments);
+                saveData(imported.transactions, imported.fixedCosts);
+                // Recarrega interface
+                renderCategoryList();
+                renderCategoryOptions();
+                renderPaymentList();
+                renderPaymentOptions();
+                renderDashboard();
+                alert('Dados importados com sucesso!');
+            } catch (err) {
+                alert('Erro ao importar o arquivo: ' + err.message);
+            }
+        };
+        reader.readAsText(file);
+    }
+
+    /**
+     * Gera uma representação JSON de todos os dados (categorias, formas, lançamentos e custos) sem baixar arquivo.
+     * Retorna a string JSON e atualiza a área de texto de exportação.
+     */
+    function exportDataToText() {
+        const current = loadData();
+        const data = {
+            categories: loadCategories(),
+            payments: loadPayments(),
+            transactions: current.txs,
+            fixedCosts: current.fix
+        };
+        const jsonStr = JSON.stringify(data, null, 2);
+        const textArea = document.getElementById('exportDataText');
+        if (textArea) {
+            textArea.value = jsonStr;
+        }
+        return jsonStr;
+    }
+
+    /**
+     * Copia o conteúdo da área de exportação para a área de transferência.
+     */
+    function copyExportData() {
+        const textArea = document.getElementById('exportDataText');
+        if (!textArea || !textArea.value) {
+            alert('Nada para copiar. Gere os dados antes.');
+            return;
+        }
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(textArea.value).then(() => {
+                alert('Dados copiados para a área de transferência.');
+            }).catch(() => {
+                alert('Não foi possível copiar automaticamente. Copie o texto manualmente.');
+            });
+        } else {
+            // fallback: seleciona texto para cópia manual
+            textArea.select();
+            alert('Selecione e copie o texto manualmente.');
+        }
+    }
+
+    /**
+     * Importa dados a partir de uma string JSON colada pelo usuário.
+     */
+    function importDataFromText() {
+        const textarea = document.getElementById('importDataText');
+        if (!textarea) return;
+        const text = textarea.value.trim();
+        if (!text) {
+            alert('Cole o JSON a ser importado.');
+            return;
+        }
+        try {
+            const imported = JSON.parse(text);
+            if (!imported || typeof imported !== 'object') {
+                throw new Error('Formato inválido.');
+            }
+            if (!imported.categories || !imported.payments || !imported.transactions || !imported.fixedCosts) {
+                throw new Error('JSON incompleto. Precisa conter categories, payments, transactions e fixedCosts.');
+            }
+            if (!confirm('Importar e substituir todos os dados atuais?')) return;
+            // substitui dados e recarrega
+            saveCategories(imported.categories);
+            savePayments(imported.payments);
+            saveData(imported.transactions, imported.fixedCosts);
+            renderCategoryList();
+            renderCategoryOptions();
+            renderPaymentList();
+            renderPaymentOptions();
+            renderDashboard();
+            alert('Dados importados com sucesso!');
+            // Limpa área de importação
+            textarea.value = '';
+            // Atualiza área de exportação para refletir dados atuais
+            exportDataToText();
+        } catch (err) {
+            alert('Erro ao importar: ' + err.message);
+        }
+    }
+    </script>
+</body>
+</html>
